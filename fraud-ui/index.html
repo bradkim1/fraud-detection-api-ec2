@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Fraud Detection System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 5px solid #3498db;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-weight: 600;
+        }
+        .result-card {
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        .result-card.fraud {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+        .result-card.legitimate {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+        }
+        .gauge-container {
+            position: relative;
+            width: 200px;
+            height: 100px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        .gauge {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 100%;
+            background: conic-gradient(#27ae60 0% var(--percentage), #e74c3c var(--percentage) 100%);
+            transform-origin: center bottom;
+            bottom: 0;
+        }
+        .gauge::after {
+            content: '';
+            position: absolute;
+            width: 160px;
+            height: 160px;
+            top: 20px;
+            left: 20px;
+            background: white;
+            border-radius: 50%;
+        }
+        .gauge-value {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            line-height: 2.5;
+            z-index: 2;
+        }
+        .history-item {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+        .history-item.fraud {
+            background-color: rgba(231, 76, 60, 0.1);
+            border-left: 4px solid #e74c3c;
+        }
+        .history-item.legitimate {
+            background-color: rgba(46, 204, 113, 0.1);
+            border-left: 4px solid #2ecc71;
+        }
+        .stats-card {
+            text-align: center;
+            padding: 15px;
+        }
+        .stats-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            border-color: #3498db;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-shield-alt me-2"></i>Advanced Fraud Detection System</h1>
+                    <p class="lead mb-0">Analyze transactions using machine learning to detect potential fraud</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span id="currentDateTime" class="text-light"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                            <div class="container-fluid">
+                                <a class="navbar-brand" href="#">Fraud Detection</a>
+                                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                                    <span class="navbar-toggler-icon"></span>
+                                </button>
+                                <div class="collapse navbar-collapse" id="navbarNav">
+                                    <ul class="navbar-nav">
+                                        <li class="nav-item">
+                                            <a class="nav-link active" href="index.html">Prediction Interface</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link" href="dashboard.html">Dashboard</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link" href="logs.html">Logs</a>
+                                        </li>
+					<li class="nav-item">
+					    <a class="nav-link" href="/docs/" target="_blank">Documentation</a>
+					</li>	
+                                    </ul>
+                                </div>
+                            </div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Transaction Form Column -->
+            <div class="col-lg-8">
+                <div class="card" id="transactionForm">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Transaction Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="fraudForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="transactionAmt" class="form-label">Transaction Amount ($)</label>
+                                    <input type="number" class="form-control" id="transactionAmt" step="0.01" min="0" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="productCD" class="form-label">Product Code</label>
+                                    <select class="form-select" id="productCD" required>
+                                        <option value="C">C - Online Payment</option>
+                                        <option value="H">H - High Value</option>
+                                        <option value="R">R - Recurring</option>
+                                        <option value="S">S - Standard</option>
+                                        <option value="W">W - Wire Transfer</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="card1" class="form-label">Card ID</label>
+                                    <input type="number" class="form-control" id="card1" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="card4" class="form-label">Card Type</label>
+                                    <select class="form-select" id="card4" required>
+                                        <option value="visa">Visa</option>
+                                        <option value="mastercard">Mastercard</option>
+                                        <option value="amex">American Express</option>
+                                        <option value="discover">Discover</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="card6" class="form-label">Card Category</label>
+                                    <select class="form-select" id="card6" required>
+                                        <option value="debit">Debit</option>
+                                        <option value="credit">Credit</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="P_emaildomain" class="form-label">Purchaser Email Domain</label>
+                                    <select class="form-select" id="P_emaildomain">
+                                        <option value="gmail.com">gmail.com</option>
+                                        <option value="yahoo.com">yahoo.com</option>
+                                        <option value="hotmail.com">hotmail.com</option>
+                                        <option value="aol.com">aol.com</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="transactionDT" class="form-label">Transaction Date/Time</label>
+                                    <input type="datetime-local" class="form-control" id="transactionDT">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="amount_decimal" class="form-label">Transaction Amount (Decimal Part)</label>
+                                    <select class="form-select" id="amount_decimal">
+                                        <option value="00">00 (Even amount)</option>
+                                        <option value="99">99 (Common in fraud)</option>
+                                        <option value="other">Other value</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="predictBtn">
+                                <span class="spinner-border spinner-border-sm loading-spinner" role="status" aria-hidden="true" id="loadingSpinner"></span>
+                                Analyze Transaction
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Result Card -->
+                <div class="card result-card" id="result">
+                    <div class="row">
+                        <div class="col-md-7">
+                            <h3 id="fraudStatus" class="mb-3"></h3>
+                            <p class="mb-0"><strong>Transaction Amount:</strong> $<span id="resultAmount"></span></p>
+                            <p class="mb-0"><strong>Card:</strong> <span id="resultCard"></span></p>
+                            <p class="mb-0"><strong>Product:</strong> <span id="resultProduct"></span></p>
+                            <hr>
+                            <p class="mb-0"><strong>Date/Time:</strong> <span id="resultDateTime"></span></p>
+                            <p class="mt-4">
+                                <button class="btn btn-light" id="newPredictionBtn">
+                                    <i class="fas fa-redo me-2"></i>New Analysis
+                                </button>
+                                <button class="btn btn-light ms-2" id="saveResultBtn">
+                                    <i class="fas fa-save me-2"></i>Save Result
+                                </button>
+                            </p>
+                        </div>
+                        <div class="col-md-5 text-center">
+                            <h5>Fraud Probability</h5>
+                            <div class="gauge-container">
+                                <div class="gauge" id="probabilityGauge"></div>
+                                <div class="gauge-value" id="probabilityValue">0%</div>
+                            </div>
+                            <div class="mt-3">
+                                <p class="mb-0" id="riskLevel"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Column -->
+            <div class="col-lg-4">
+                <!-- Statistics Cards -->
+                <div class="row">
+                    <div class="col-6">
+                        <div class="card stats-card mb-3">
+                            <h6 class="text-muted">Total Analyses</h6>
+                            <div class="stats-value" id="totalPredictions">0</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card stats-card mb-3">
+                            <h6 class="text-muted">Fraud Detected</h6>
+                            <div class="stats-value" id="fraudCount">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time chart -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Fraud Probability Trends</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="trendChart" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- History -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Analyses</h5>
+                        <button class="btn btn-sm btn-outline-secondary" id="clearHistoryBtn">Clear</button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush" id="historyList">
+                            <div class="p-3 text-center text-muted">No records yet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Monitoring Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>System Monitoring</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 text-center mb-3">
+                                <h6>API Status</h6>
+                                <span class="badge bg-success fs-6" id="apiStatus">Online</span>
+                            </div>
+                            <div class="col-md-3 text-center mb-3">
+                                <h6>Response Time</h6>
+                                <span class="fs-6" id="responseTime">0 ms</span>
+                            </div>
+                            <div class="col-md-3 text-center mb-3">
+                                <h6>Last Check</h6>
+                                <span class="fs-6" id="lastCheck">-</span>
+                            </div>
+                            <div class="col-md-3 text-center mb-3">
+                                <h6>Uptime</h6>
+                                <span class="fs-6" id="uptime">-</span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>API Response Times (ms)</h6>
+                                <canvas id="responseTimeChart" height="100"></canvas>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Prediction Distribution</h6>
+                                <canvas id="distributionChart" height="100"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-light mt-5 py-3">
+        <div class="container text-center">
+            <p class="mb-0">Advanced Fraud Detection System &copy; 2025</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // System init time (for uptime tracking)
+        const systemStartTime = new Date();
+        
+        // Globals for tracking metrics
+        let totalPredictions = 0;
+        let fraudCount = 0;
+        let predictionHistory = [];
+        let responseTimes = [];
+        const maxHistoryLength = 50;
+        let lastAPICheck = null;
+        
+        // Chart objects
+        let trendChart;
+        let responseTimeChart;
+        let distributionChart;
+        
+        // Update current date and time
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentDateTime').textContent = now.toLocaleString();
+            
+            // Update uptime
+            const uptimeElement = document.getElementById('uptime');
+            const uptime = Math.floor((now - systemStartTime) / 1000);
+            const hours = Math.floor(uptime / 3600);
+            const minutes = Math.floor((uptime % 3600) / 60);
+            const seconds = uptime % 60;
+            uptimeElement.textContent = `${hours}h ${minutes}m ${seconds}s`;
+        }
+        
+        // Initialize charts
+        function initCharts() {
+            // Trend chart
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            trendChart = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Fraud Probability (%)',
+                        data: [],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+            
+            // Response time chart
+            const responseCtx = document.getElementById('responseTimeChart').getContext('2d');
+            responseTimeChart = new Chart(responseCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'API Response Time (ms)',
+                        data: [],
+                        borderColor: '#9b59b6',
+                        backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                        fill: true,
+                        tension: 0.2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Distribution chart
+            const distCtx = document.getElementById('distributionChart').getContext('2d');
+            distributionChart = new Chart(distCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Legitimate', 'Fraud'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#2ecc71', '#e74c3c']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+        
+        // Update trend chart with new data
+        function updateTrendChart(probability) {
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString();
+            
+            trendChart.data.labels.push(timeLabel);
+            trendChart.data.datasets[0].data.push(probability * 100);
+            
+            // Keep chart size manageable
+            if (trendChart.data.labels.length > 10) {
+                trendChart.data.labels.shift();
+                trendChart.data.datasets[0].data.shift();
+            }
+            
+            trendChart.update();
+        }
+        
+        // Update response time chart
+        function updateResponseTimeChart(responseTime) {
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString();
+            
+            responseTimeChart.data.labels.push(timeLabel);
+            responseTimeChart.data.datasets[0].data.push(responseTime);
+            
+            // Keep chart size manageable
+            if (responseTimeChart.data.labels.length > 10) {
+                responseTimeChart.data.labels.shift();
+                responseTimeChart.data.datasets[0].data.shift();
+            }
+            
+            responseTimeChart.update();
+        }
+        
+        // Update distribution chart
+        function updateDistributionChart() {
+            const legitCount = totalPredictions - fraudCount;
+            distributionChart.data.datasets[0].data = [legitCount, fraudCount];
+            distributionChart.update();
+        }
+        
+        // Add transaction to history
+        function addToHistory(transaction, isFraud, probability) {
+            const historyList = document.getElementById('historyList');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            // Clear "no records" message if present
+            if (historyList.querySelector('.text-muted')) {
+                historyList.innerHTML = '';
+            }
+            
+            // Create history item
+            const historyItem = document.createElement('div');
+            historyItem.className = `history-item ${isFraud ? 'fraud' : 'legitimate'}`;
+            historyItem.innerHTML = `
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <strong>$${transaction.TransactionAmt}</strong> - ${transaction.card4} ${transaction.card6}
+                        <div class="small text-muted">${timestamp}</div>
+                    </div>
+                    <span class="badge ${isFraud ? 'bg-danger' : 'bg-success'}">${Math.round(probability * 100)}%</span>
+                </div>
+            `;
+            
+            // Add to history list
+            historyList.prepend(historyItem);
+            
+            // Limit history length
+            const items = historyList.querySelectorAll('.history-item');
+            if (items.length > 5) {
+                historyList.removeChild(items[items.length - 1]);
+            }
+            
+            // Store in prediction history
+            predictionHistory.push({
+                transaction,
+                isFraud,
+                probability,
+                timestamp
+            });
+            
+            // Limit history array length
+            if (predictionHistory.length > maxHistoryLength) {
+                predictionHistory.shift();
+            }
+        }
+        
+        // Simulate an API status check
+        function checkAPIStatus() {
+            const apiStatusElement = document.getElementById('apiStatus');
+            const lastCheckElement = document.getElementById('lastCheck');
+            
+            fetch('/api/')
+                .then(response => {
+                    if (response.ok) {
+                        apiStatusElement.textContent = 'Online';
+                        apiStatusElement.className = 'badge bg-success fs-6';
+                    } else {
+                        apiStatusElement.textContent = 'Error';
+                        apiStatusElement.className = 'badge bg-warning fs-6';
+                    }
+                })
+                .catch(error => {
+                    apiStatusElement.textContent = 'Offline';
+                    apiStatusElement.className = 'badge bg-danger fs-6';
+                    console.error('API Status Check Error:', error);
+                })
+                .finally(() => {
+                    lastAPICheck = new Date();
+                    lastCheckElement.textContent = lastAPICheck.toLocaleTimeString();
+                });
+        }
+        
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiUrl = '/api/predict';
+            
+            // Initialize charts
+            initCharts();
+            
+            // Set current date/time in transaction form
+            const now = new Date();
+            const dateTimeStr = now.toISOString().slice(0, 16);
+            document.getElementById('transactionDT').value = dateTimeStr;
+            
+            // Start updating date/time
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            // Check API status initially and periodically
+            checkAPIStatus();
+            setInterval(checkAPIStatus, 30000); // Check every 30 seconds
+            
+            // Form submission handler
+            document.getElementById('fraudForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show loading
+                document.getElementById('loadingSpinner').style.display = 'inline-block';
+                document.getElementById('predictBtn').disabled = true;
+                
+                // Collect form data
+                const transactionAmt = parseFloat(document.getElementById('transactionAmt').value);
+                const productCD = document.getElementById('productCD').value;
+                const card1 = parseInt(document.getElementById('card1').value);
+                const card4 = document.getElementById('card4').value;
+                const card6 = document.getElementById('card6').value;
+                const P_emaildomain = document.getElementById('P_emaildomain').value;
+                
+                // Prepare data for API
+                const transactionData = {
+                    "TransactionAmt": transactionAmt,
+                    "ProductCD": productCD,
+                    "card1": card1,
+                    "card4": card4,
+                    "card6": card6,
+                    "P_emaildomain": P_emaildomain
+                };
+                
+                const data = {
+                    "data": transactionData
+                };
+                
+                // Record start time for response time measurement
+                const startTime = performance.now();
+                
+                // Call the API
+                fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('API request failed');
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    // Calculate response time
+                    const endTime = performance.now();
+                    const responseTime = Math.round(endTime - startTime);
+                    document.getElementById('responseTime').textContent = `${responseTime} ms`;
+                    
+                    // Update response time chart
+                    updateResponseTimeChart(responseTime);
+                    responseTimes.push(responseTime);
+                    
+                    // Update counters
+                    totalPredictions++;
+                    if (result.is_fraud) {
+                        fraudCount++;
+                    }
+                    
+                    // Update stats display
+                    document.getElementById('totalPredictions').textContent = totalPredictions;
+                    document.getElementById('fraudCount').textContent = fraudCount;
+                    
+                    // Update distribution chart
+                    updateDistributionChart();
+                    
+                    // Update trend chart
+                    updateTrendChart(result.probability);
+                    
+                    // Hide loading
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                    document.getElementById('predictBtn').disabled = false;
+                    
+                    // Display result
+                    const resultDiv = document.getElementById('result');
+                    const fraudStatus = document.getElementById('fraudStatus');
+                    const probabilityGauge = document.getElementById('probabilityGauge');
+                    const probabilityValue = document.getElementById('probabilityValue');
+                    const riskLevel = document.getElementById('riskLevel');
+                    
+                    // Set result data
+                    document.getElementById('resultAmount').textContent = transactionAmt.toFixed(2);
+                    document.getElementById('resultCard').textContent = `${card4} ${card6} (ID: ${card1})`;
+                    document.getElementById('resultProduct').textContent = productCD;
+                    document.getElementById('resultDateTime').textContent = new Date().toLocaleString();
+                    
+                    // Set fraud status and styling
+                    if (result.is_fraud) {
+                        resultDiv.className = 'card result-card fraud';
+                        fraudStatus.textContent = '⚠️ Fraudulent Transaction Detected';
+                    } else {
+                        resultDiv.className = 'card result-card legitimate';
+                        fraudStatus.textContent = '✓ Transaction Appears Legitimate';
+                    }
+                    
+                    // Format probability as percentage
+                    const probabilityPercent = (result.probability * 100).toFixed(1);
+                    probabilityValue.textContent = `${probabilityPercent}%`;
+                    
+                    // Set gauge percentage
+                    probabilityGauge.style.setProperty('--percentage', `${probabilityPercent}%`);
+                    
+                    // Set risk level text
+                    if (result.probability < 0.3) {
+                        riskLevel.textContent = 'Low Risk';
+                        riskLevel.className = 'text-success fw-bold';
+                    } else if (result.probability < 0.7) {
+                        riskLevel.textContent = 'Medium Risk';
+                        riskLevel.className = 'text-warning fw-bold';
+                    } else {
+                        riskLevel.textContent = 'High Risk';
+                        riskLevel.className = 'text-danger fw-bold';
+                    }
+                    
+                    // Add to history
+                    addToHistory(transactionData, result.is_fraud, result.probability);
+                    
+                    // Show result
+                    resultDiv.style.display = 'block';
+                    
+                    // Log for monitoring
+                    console.log('Prediction:', {
+                        timestamp: new Date().toISOString(),
+                        transaction: transactionData,
+                        prediction: result,
+                        responseTime
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    
+                    // Hide loading
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                    document.getElementById('predictBtn').disabled = false;
+                    
+                    // Show error message
+                    alert('Error analyzing transaction. Please try again.');
+                    
+                    // Update API status
+                    document.getElementById('apiStatus').textContent = 'Error';
+                    document.getElementById('apiStatus').className = 'badge bg-danger fs-6';
+                });
+            });
+            
+            // New prediction button handler
+            document.getElementById('newPredictionBtn').addEventListener('click', function() {
+                document.getElementById('result').style.display = 'none';
+            });
+            
+            // Clear history button handler
+            document.getElementById('clearHistoryBtn').addEventListener('click', function() {
+                const historyList = document.getElementById('historyList');
+                historyList.innerHTML = '<div class="p-3 text-center text-muted">No records yet</div>';
+                predictionHistory = [];
+            });
+            
+            // Save result button handler
+            document.getElementById('saveResultBtn').addEventListener('click', function() {
+                const latestResult = predictionHistory[predictionHistory.length - 1];
+                if (!latestResult) return;
+                
+                // Create data to download
+                const resultData = {
+                    transaction: latestResult.transaction,
+                    prediction: {
+                        is_fraud: latestResult.isFraud,
+                        probability: latestResult.probability
+                    },
+                    timestamp: latestResult.timestamp
+                };
+                
+                // Create and download file
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(resultData, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "fraud_analysis_" + new Date().toISOString().replace(/:/g, '-') + ".json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            });
+        });
+    </script>
+</body>
+</html>

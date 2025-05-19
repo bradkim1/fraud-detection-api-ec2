@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection System - Log Viewer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 5px solid #3498db;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-weight: 600;
+        }
+        pre {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .log-entry:hover {
+            background-color: #f0f0f0;
+        }
+        .log-time {
+            color: #666;
+            margin-right: 10px;
+        }
+        .log-level-INFO {
+            color: #3498db;
+        }
+        .log-level-WARNING {
+            color: #f39c12;
+        }
+        .log-level-ERROR {
+            color: #e74c3c;
+        }
+        .refresh-btn {
+            cursor: pointer;
+            color: #6c757d;
+        }
+        .refresh-btn:hover {
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-file-alt me-2"></i>Log Viewer</h1>
+                    <p class="lead mb-0">View system and API logs</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span id="currentDateTime" class="text-light"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                            <div class="container-fluid">
+                                <a class="navbar-brand" href="#">Logs</a>
+                                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                                    <span class="navbar-toggler-icon"></span>
+                                </button>
+                                <div class="collapse navbar-collapse" id="navbarNav">
+                                    <ul class="navbar-nav">
+                                        <li class="nav-item">
+                                            <a class="nav-link" href="index.html">Prediction Interface</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link" href="dashboard.html">Dashboard</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link active" href="logs.html">Logs</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <span class="navbar-text">
+                                    <i class="fas fa-sync refresh-btn" id="refreshBtn" title="Refresh Logs"></i>
+                                </span>
+                            </div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">API Logs</h5>
+                        <select class="form-select form-select-sm" style="width: auto;" id="logTypeSelect">
+                            <option value="api">API Logs</option>
+                            <option value="predictions">Prediction Logs</option>
+                            <option value="requests">Request Logs</option>
+                        </select>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Filter logs..." id="logFilter">
+                                <button class="btn btn-outline-secondary" type="button" id="clearFilterBtn">Clear</button>
+                            </div>
+                        </div>
+                        <div id="logContent" class="border rounded p-3 bg-light">
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                <p>Loading logs...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-light mt-5 py-3">
+        <div class="container text-center">
+            <p class="mb-0">Fraud Detection System Log Viewer &copy; 2025</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Simulated logs for demo
+        const apiLogs = [
+            "2025-05-19 04:15:23,456 - fraud_api - INFO - Starting Enhanced Fraud Detection API",
+            "2025-05-19 04:15:23,789 - fraud_api - INFO - Log directory: /home/ubuntu/model-ec2/logs",
+            "2025-05-19 04:15:24,123 - fraud_api - INFO - Loading model and pipeline...",
+            "2025-05-19 04:15:25,457 - fraud_api - INFO - Model loaded successfully: RandomForestClassifier",
+            "2025-05-19 04:15:26,789 - fraud_api - INFO - Pipeline loaded successfully: AdvancedMLPipeline",
+            "2025-05-19 04:15:27,123 - fraud_api - INFO - Starting Enhanced Fraud Detection API on port 8015..."
+        ];
+        
+        const predictionLogs = [
+            '{"timestamp": "2025-05-19T04:20:12.345", "request_id": "pred-1621415412-0", "transaction": {"TransactionAmt": 100.0, "ProductCD": "C", "card1": 1234, "card4": "visa", "card6": "debit"}, "prediction": 0, "probability": 0.12, "is_fraud": false, "processing_time": 0.156}',
+            '{"timestamp": "2025-05-19T04:22:15.678", "request_id": "pred-1621415535-1", "transaction": {"TransactionAmt": 999.99, "ProductCD": "H", "card1": 5678, "card4": "mastercard", "card6": "credit"}, "prediction": 1, "probability": 0.86, "is_fraud": true, "processing_time": 0.178}',
+            '{"timestamp": "2025-05-19T04:25:22.901", "request_id": "pred-1621415722-2", "transaction": {"TransactionAmt": 49.95, "ProductCD": "S", "card1": 9012, "card4": "visa", "card6": "debit"}, "prediction": 0, "probability": 0.05, "is_fraud": false, "processing_time": 0.143}'
+        ];
+        
+        const requestLogs = [
+            "2025-05-19 04:20:12,123 - api_requests - INFO - Request req-1621415412-0 started - Method: POST, Path: /predict, Client: 192.168.1.100",
+            "2025-05-19 04:20:12,345 - api_requests - INFO - Request req-1621415412-0 completed - Status: 200, Time: 0.1560s",
+            "2025-05-19 04:22:15,456 - api_requests - INFO - Request req-1621415535-1 started - Method: POST, Path: /predict, Client: 192.168.1.101",
+            "2025-05-19 04:22:15,678 - api_requests - INFO - Request req-1621415535-1 completed - Status: 200, Time: 0.1780s",
+            "2025-05-19 04:23:45,789 - api_requests - INFO - Request req-1621415625-2 started - Method: GET, Path: /metrics, Client: 192.168.1.102",
+            "2025-05-19 04:23:45,890 - api_requests - INFO - Request req-1621415625-2 completed - Status: 200, Time: 0.0980s",
+            "2025-05-19 04:25:22,901 - api_requests - INFO - Request req-1621415722-3 started - Method: POST, Path: /predict, Client: 192.168.1.100",
+            "2025-05-19 04:25:23,045 - api_requests - INFO - Request req-1621415722-3 completed - Status: 200, Time: 0.1430s"
+        ];
+        
+        // Update current time display
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentDateTime').textContent = now.toLocaleString();
+        }
+        
+        // Format log entry with highlighting
+        function formatLogEntry(log, type) {
+            if (type === 'predictions') {
+                try {
+                    const logObj = JSON.parse(log);
+                    const timestamp = new Date(logObj.timestamp).toLocaleString();
+                    const isFraud = logObj.is_fraud ? 'FRAUD' : 'LEGITIMATE';
+                    const fraudClass = logObj.is_fraud ? 'text-danger' : 'text-success';
+                    
+                    return `<div class="log-entry">
+                        <span class="log-time">${timestamp}</span>
+                        <span class="badge bg-primary">ID: ${logObj.request_id}</span>
+                        <span>$${logObj.transaction.TransactionAmt} - ${logObj.transaction.card4} ${logObj.transaction.card6}</span>
+                        <span class="badge ${fraudClass}">${isFraud} (${(logObj.probability * 100).toFixed(1)}%)</span>
+                        <span class="badge bg-secondary">${(logObj.processing_time * 1000).toFixed(1)}ms</span>
+                    </div>`;
+                } catch (e) {
+                    return `<div class="log-entry">
+                        <span class="text-danger">Error parsing log: ${e.message}</span>
+                        <br>
+                        <code>${log}</code>
+                    </div>`;
+                }
+            } else {
+                // Regular log format
+                let logClass = '';
+                if (log.includes(' ERROR ')) {
+                    logClass = 'log-level-ERROR';
+                } else if (log.includes(' WARNING ')) {
+                    logClass = 'log-level-WARNING';
+                } else if (log.includes(' INFO ')) {
+                    logClass = 'log-level-INFO';
+                }
+                
+                return `<div class="log-entry ${logClass}">${log}</div>`;
+            }
+        }
+        
+        // Display logs based on selected type
+        function displayLogs(logType, filterText = '') {
+            const logContent = document.getElementById('logContent');
+            let logs;
+            
+            // Select appropriate logs based on type
+            switch(logType) {
+                case 'api':
+                    logs = apiLogs;
+                    break;
+                case 'predictions':
+                    logs = predictionLogs;
+                    break;
+                case 'requests':
+                    logs = requestLogs;
+                    break;
+                default:
+                    logs = apiLogs;
+            }
+            
+            // Apply filter if specified
+            if (filterText) {
+                const lowerFilter = filterText.toLowerCase();
+                logs = logs.filter(log => log.toLowerCase().includes(lowerFilter));
+            }
+            
+            // If no logs match filter
+            if (logs.length === 0) {
+                logContent.innerHTML = `<div class="text-center text-muted py-5">
+                    <p>No logs matching the filter "${filterText}"</p>
+                </div>`;
+                return;
+            }
+            
+            // Format logs
+            let formattedLogs = '';
+            for (const log of logs.reverse()) {
+                formattedLogs += formatLogEntry(log, logType);
+            }
+            
+            logContent.innerHTML = formattedLogs;
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update date/time
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            // Initial logs display
+            displayLogs('api');
+            
+            // Log type change handler
+            document.getElementById('logTypeSelect').addEventListener('change', function() {
+                displayLogs(this.value, document.getElementById('logFilter').value);
+            });
+            
+            // Filter handler
+            document.getElementById('logFilter').addEventListener('input', function() {
+                displayLogs(document.getElementById('logTypeSelect').value, this.value);
+            });
+            
+            // Clear filter
+            document.getElementById('clearFilterBtn').addEventListener('click', function() {
+                document.getElementById('logFilter').value = '';
+                displayLogs(document.getElementById('logTypeSelect').value, '');
+            });
+            
+            // Refresh button handler
+            document.getElementById('refreshBtn').addEventListener('click', function() {
+                // In a real system, this would fetch fresh logs
+                displayLogs(document.getElementById('logTypeSelect').value, document.getElementById('logFilter').value);
+            });
+        });
+    </script>
+</body>
+</html>

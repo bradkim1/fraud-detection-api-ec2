@@ -1,0 +1,18 @@
+version: '3'
+services:
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8888:8888"  # Jupyter Notebook
+      - "8001:8000"  # For FastAPI testing (using 8001 on host to avoid conflicts)
+    volumes:
+      # Map your EC2 directories to container directories
+      - /home/ubuntu/model-ec2:/app  # Root project directory
+      - /home/ubuntu/model-ec2/model:/app/model  # Model directory
+      - /home/ubuntu/model-ec2/notebooks:/app/notebooks  # Notebooks directory
+      - /home/ubuntu/model-ec2/train_transaction.csv:/app/train_transaction.csv  # Data file
+    environment:
+      - PYTHONPATH=/app  # Update Python path to match container structure
+    restart: unless-stopped

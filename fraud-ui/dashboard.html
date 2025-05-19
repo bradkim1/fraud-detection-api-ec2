@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection System - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 5px solid #3498db;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-weight: 600;
+        }
+        .stats-card {
+            text-align: center;
+            padding: 20px;
+        }
+        .stats-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .refresh-btn {
+            cursor: pointer;
+            color: #6c757d;
+        }
+        .refresh-btn:hover {
+            color: #3498db;
+        }
+        .predictions-table th, .logs-table th {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .tag {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .tag-fraud {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .tag-legitimate {
+            background-color: #2ecc71;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-chart-line me-2"></i>Fraud Detection Dashboard</h1>
+                    <p class="lead mb-0">System performance monitoring and analytics</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span id="currentDateTime" class="text-light"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                            <div class="container-fluid">
+                                <a class="navbar-brand" href="#">System Overview</a>
+                                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                                    <span class="navbar-toggler-icon"></span>
+                                </button>
+                                <div class="collapse navbar-collapse" id="navbarNav">
+                                    <ul class="navbar-nav">
+                                        <li class="nav-item">
+                                            <a class="nav-link" href="index.html">Prediction Interface</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link active" href="dashboard.html">Dashboard</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <span class="navbar-text">
+                                    <i class="fas fa-sync refresh-btn" id="refreshBtn" title="Refresh Data"></i>
+                                </span>
+                            </div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <h6 class="text-muted">API Uptime</h6>
+                    <div class="stats-value" id="uptime">--:--:--</div>
+                    <small class="text-muted" id="startTime">Started: --</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <h6 class="text-muted">Total Requests</h6>
+                    <div class="stats-value" id="requestCount">0</div>
+                    <small class="text-muted" id="avgRequestTime">Avg Time: 0ms</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <h6 class="text-muted">Fraud Rate</h6>
+                    <div class="stats-value" id="fraudRate">0%</div>
+                    <small class="text-muted" id="fraudCount">0 of 0 predictions</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <h6 class="text-muted">API Status</h6>
+                    <div class="stats-value" id="apiStatus">
+                        <span class="badge bg-secondary">Checking...</span>
+                    </div>
+                    <small class="text-muted" id="lastChecked">Last Checked: --</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Response Time Trend</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="responseTimeChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Prediction Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="predictionDistributionChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Predictions and System Logs -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Predictions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover predictions-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Transaction</th>
+                                        <th>Card</th>
+                                        <th>Prediction</th>
+                                        <th>Probability</th>
+                                        <th>Response Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentPredictionsTable">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">No predictions yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">System Logs</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group logs-list" id="systemLogs">
+                            <div class="list-group-item text-center text-muted">No logs yet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-light mt-5 py-3">
+        <div class="container text-center">
+            <p class="mb-0">Fraud Detection System Dashboard &copy; 2025</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Global variables
+        let responseTimeChart;
+        let predictionDistributionChart;
+        let predictionHistory = [];
+        let systemLogs = [];
+        const startTime = new Date();
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update date/time
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            // Initialize charts
+            initCharts();
+            
+            // Load initial data
+            refreshData();
+            
+            // Set up refresh button
+            document.getElementById('refreshBtn').addEventListener('click', function() {
+                refreshData();
+            });
+            
+            // Auto-refresh every 30 seconds
+            setInterval(refreshData, 30000);
+        });
+
+        // Update current time display
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentDateTime').textContent = now.toLocaleString();
+            
+            // Update uptime
+            const uptime = Math.floor((now - startTime) / 1000);
+            const hours = Math.floor(uptime / 3600);
+            const minutes = Math.floor((uptime % 3600) / 60);
+            const seconds = uptime % 60;
+            const uptimeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            document.getElementById('uptime').textContent = uptimeStr;
+        }
+
+        // Initialize charts
+        function initCharts() {
+            // Response time chart
+            const responseTimeCtx = document.getElementById('responseTimeChart').getContext('2d');
+            responseTimeChart = new Chart(responseTimeCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: [],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Time (ms)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Request'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Prediction distribution chart
+            const predictionDistributionCtx = document.getElementById('predictionDistributionChart').getContext('2d');
+            predictionDistributionChart = new Chart(predictionDistributionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Legitimate', 'Fraudulent'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#2ecc71', '#e74c3c'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Refresh dashboard data
+        function refreshData() {
+            checkAPIStatus();
+            fetchMetrics();
+            // In a real system, you would also:
+            // fetchRecentPredictions();
+            // fetchSystemLogs();
+            
+            // For demo purposes, we'll simulate these
+            simulateRecentPredictions();
+            simulateSystemLogs();
+        }
+
+        // Check API status
+        function checkAPIStatus() {
+            fetch('/api/')
+                .then(response => {
+                    const statusElement = document.getElementById('apiStatus');
+                    const lastCheckedElement = document.getElementById('lastChecked');
+                    
+                    if (response.ok) {
+                        statusElement.innerHTML = '<span class="badge bg-success">Online</span>';
+                    } else {
+                        statusElement.innerHTML = '<span class="badge bg-warning">Issues</span>';
+                    }
+                    
+                    const now = new Date();
+                    lastCheckedElement.textContent = `Last Checked: ${now.toLocaleTimeString()}`;
+                    
+                    return response.json();
+                })
+                .then(data => {
+                    // Update start time if available
+                    if (data && data.uptime) {
+                        const uptimeSeconds = parseFloat(data.uptime);
+                        const startTimeDate = new Date(Date.now() - (uptimeSeconds * 1000));
+                        document.getElementById('startTime').textContent = `Started: ${startTimeDate.toLocaleString()}`;
+                    }
+                })
+                .catch(error => {
+                    console.error('API Status Check Error:', error);
+                    document.getElementById('apiStatus').innerHTML = '<span class="badge bg-danger">Offline</span>';
+                    const now = new Date();
+                    document.getElementById('lastChecked').textContent = `Last Checked: ${now.toLocaleTimeString()}`;
+                });
+        }
+
+        // Fetch API metrics
+        function fetchMetrics() {
+            fetch('/api/metrics')
+                .then(response => response.json())
+                .then(data => {
+                    // Update request count
+                    document.getElementById('requestCount').textContent = data.request_count;
+                    
+                    // Update fraud rate
+                    const fraudRate = data.prediction_count > 0 
+                        ? (data.fraud_count / data.prediction_count * 100).toFixed(1) 
+                        : 0;document.getElementById('fraudRate').textContent = `${fraudRate}%`;
+                    document.getElementById('fraudCount').textContent = 
+                        `${data.fraud_count} of ${data.prediction_count} predictions`;
+                    
+                    // Update average request time
+                    const avgResponseTime = data.avg_response_time * 1000; // Convert to ms
+                    document.getElementById('avgRequestTime').textContent = 
+                        `Avg Time: ${avgResponseTime.toFixed(1)}ms`;
+                    
+                    // Update response time chart
+                    if (data.last_5_response_times && data.last_5_response_times.length > 0) {
+                        // Convert to milliseconds
+                        const responseTimes = data.last_5_response_times.map(time => time * 1000);
+                        
+                        // Create labels
+                        const labels = Array.from(
+                            {length: responseTimes.length}, 
+                            (_, i) => `Req ${data.request_count - responseTimes.length + i + 1}`
+                        );
+                        
+                        // Update chart
+                        responseTimeChart.data.labels = labels;
+                        responseTimeChart.data.datasets[0].data = responseTimes;
+                        responseTimeChart.update();
+                    }
+                    
+                    // Update prediction distribution chart
+                    const legitimateCount = data.prediction_count - data.fraud_count;
+                    predictionDistributionChart.data.datasets[0].data = [legitimateCount, data.fraud_count];
+                    predictionDistributionChart.update();
+                })
+                .catch(error => {
+                    console.error('Error fetching metrics:', error);
+                });
+        }
+
+        // Simulate recent predictions (in a real system, this would fetch from the API)
+        function simulateRecentPredictions() {
+            const tableBody = document.getElementById('recentPredictionsTable');
+            
+            // If this is the first call, clear the placeholder
+            if (tableBody.innerHTML.includes('No predictions yet')) {
+                tableBody.innerHTML = '';
+            }
+            
+            // Only add a new prediction 50% of the time to simulate real usage
+            if (Math.random() > 0.5 || predictionHistory.length === 0) {
+                // Generate a random prediction
+                const now = new Date();
+                const amount = (Math.random() * 1000 + 50).toFixed(2);
+                const cardTypes = ['visa', 'mastercard', 'amex', 'discover'];
+                const cardType = cardTypes[Math.floor(Math.random() * cardTypes.length)];
+                const cardCategories = ['debit', 'credit'];
+                const cardCategory = cardCategories[Math.floor(Math.random() * cardCategories.length)];
+                const cardId = Math.floor(Math.random() * 9000) + 1000;
+                const probability = Math.random();
+                const isFraud = probability > 0.7;
+                const responseTime = Math.floor(Math.random() * 200) + 50;
+                
+                const prediction = {
+                    timestamp: now,
+                    amount: amount,
+                    cardType: cardType,
+                    cardCategory: cardCategory,
+                    cardId: cardId,
+                    probability: probability,
+                    isFraud: isFraud,
+                    responseTime: responseTime
+                };
+                
+                predictionHistory.unshift(prediction);
+                
+                // Keep history size manageable
+                if (predictionHistory.length > 10) {
+                    predictionHistory.pop();
+                }
+            }
+            
+            // Render all predictions in history
+            tableBody.innerHTML = '';
+            predictionHistory.forEach(pred => {
+                const row = document.createElement('tr');
+                
+                // Format prediction badge
+                const predictionBadge = pred.isFraud 
+                    ? '<span class="tag tag-fraud">Fraud</span>' 
+                    : '<span class="tag tag-legitimate">Legitimate</span>';
+                
+                // Format probability
+                const probabilityFormatted = (pred.probability * 100).toFixed(1) + '%';
+                
+                row.innerHTML = `
+                    <td>${pred.timestamp.toLocaleTimeString()}</td>
+                    <td>$${pred.amount}</td>
+                    <td>${pred.cardType} ${pred.cardCategory} (${pred.cardId})</td>
+                    <td>${predictionBadge}</td>
+                    <td>${probabilityFormatted}</td>
+                    <td>${pred.responseTime}ms</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Simulate system logs (in a real system, this would fetch from the API)
+        function simulateSystemLogs() {
+            const logsList = document.getElementById('systemLogs');
+            
+            // If this is the first call, clear the placeholder
+            if (logsList.innerHTML.includes('No logs yet')) {
+                logsList.innerHTML = '';
+            }
+            
+            // Only add a new log 30% of the time to simulate real usage
+            if (Math.random() > 0.7 || systemLogs.length === 0) {
+                const now = new Date();
+                const logTypes = [
+                    {type: 'info', icon: 'info-circle', color: 'text-info', message: 'API health check completed successfully'},
+                    {type: 'info', icon: 'check-circle', color: 'text-success', message: 'Prediction request processed'},
+                    {type: 'warning', icon: 'exclamation-triangle', color: 'text-warning', message: 'High fraud probability detected'},
+                    {type: 'info', icon: 'sync', color: 'text-primary', message: 'Model response time optimized'},
+                    {type: 'error', icon: 'times-circle', color: 'text-danger', message: 'Invalid request format received'}
+                ];
+                
+                const randomLog = logTypes[Math.floor(Math.random() * logTypes.length)];
+                
+                const log = {
+                    timestamp: now,
+                    type: randomLog.type,
+                    icon: randomLog.icon,
+                    color: randomLog.color,
+                    message: randomLog.message
+                };
+                
+                systemLogs.unshift(log);
+                
+                // Keep logs size manageable
+                if (systemLogs.length > 5) {
+                    systemLogs.pop();
+                }
+            }
+            
+            // Render all logs in history
+            logsList.innerHTML = '';
+            systemLogs.forEach(log => {
+                const logItem = document.createElement('div');
+                logItem.className = 'list-group-item';
+                
+                logItem.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1 ${log.color}">
+                            <i class="fas fa-${log.icon} me-2"></i>${log.type.toUpperCase()}
+                        </h6>
+                        <small>${log.timestamp.toLocaleTimeString()}</small>
+                    </div>
+                    <p class="mb-1">${log.message}</p>
+                `;
+                
+                logsList.appendChild(logItem);
+            });
+        }
+    </script>
+</body>
+</html>
