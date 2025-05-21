@@ -39,7 +39,8 @@ This repository does not include the following large file due to GitHub size lim
 1. **Miniconda Installer**:
    - Not required for running the application
    - If needed, download from https://docs.conda.io/en/latest/miniconda.html
-
+  
+     
 Fraud Detection API project follows this structure:
 
 
