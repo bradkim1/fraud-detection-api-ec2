@@ -39,14 +39,10 @@ The model files (*.pkl) are not included in this repository due to their size. P
 
 This repository does not include the following large files due to GitHub size limitations:
 
-1. **Model Files (`*.pkl`)**:
-   - Users need to train their own models using the provided notebook
-   - See `notebooks/fraud_model_training.ipynb` for the training process
-
-2. **Training Dataset (`train_transaction.csv`)**:
-   - This large dataset needs to be downloaded separately
+1. **Training Dataset (`train_transaction.csv`)**:
+   - This large dataset needs to be downloaded separately from google drive
    - Place it in the `notebooks/` directory before running the training notebook
 
-3. **Miniconda Installer**:
+2. **Miniconda Installer**:
    - Not required for running the application
    - If needed, download from https://docs.conda.io/en/latest/miniconda.html
