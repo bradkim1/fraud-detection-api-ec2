@@ -27,13 +27,6 @@ A machine learning API for detecting fraudulent transactions. This system uses a
    git clone https://github.com/bradkim1/fraud-detection-api-ec2.git
    cd fraud-detection-api-ec2
 
-## Note about model files
-
-The model files (*.pkl) are not included in this repository due to their size. Please see the instructions in the documentation for generating or downloading these files.
-
-## Note about model files
-
-The model files (*.pkl) are not included in this repository due to their size. Please see the instructions in the documentation for generating or downloading these files.
 
 ## Large Files Not Included in Repository
 
