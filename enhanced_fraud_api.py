@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, Field
 from typing import Dict, Any, Optional
 import pandas as pd
 import numpy as np
@@ -17,6 +17,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from xgboost import XGBClassifier
+import json
 
 # Configure logging
 log_dir = "/home/ubuntu/model-ec2/logs"
@@ -70,6 +71,69 @@ error_count = 0
 fraud_count = 0
 response_times = []
 
+# Load model features from the JSON file
+try:
+    with open("model_features.json", "r") as f:
+        MODEL_FEATURES = json.load(f)
+    logger.info(f"Loaded {len(MODEL_FEATURES)} feature names from model_features.json")
+except Exception as e:
+    # Fallback to hardcoded list if file doesn't exist
+    MODEL_FEATURES = [
+        "TransactionAmt", "card1", "card2", "card3", "card5", "addr1", "addr2", "dist1", "dist2",
+        "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "C11", "C12", "C13", "C14",
+        "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D14", "D15",
+        "hour", "day"
+        # Add a shortened list as fallback
+    ]
+    logger.warning(f"Error loading model_features.json: {e}. Using fallback list with {len(MODEL_FEATURES)} features.")
+
+def ensure_features(data_dict):
+    """Ensure all required features are present and remove extra features."""
+    # List of all expected features based on the error messages
+    required_features = [
+        # Core transaction features
+        'TransactionAmt',  # Note: this is TransactionAmt, not Amount
+        # C features (add more if needed)
+        'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10',
+        'C11', 'C12', 'C13', 'C14',
+        # D features (add more if needed)
+        'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10',
+        'D11', 'D12', 'D13', 'D14', 'D15',
+        # V features - include all V features up to V100+ as mentioned in the error
+        'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10',
+        'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'V18', 'V19', 'V20',
+        'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'V29', 'V30',
+        'V31', 'V32', 'V33', 'V34', 'V35', 'V36', 'V37', 'V38', 'V39', 'V40',
+        'V41', 'V42', 'V43', 'V44', 'V45', 'V46', 'V47', 'V48', 'V49', 'V50',
+        'V51', 'V52', 'V53', 'V54', 'V55', 'V56', 'V57', 'V58', 'V59', 'V60',
+        'V61', 'V62', 'V63', 'V64', 'V65', 'V66', 'V67', 'V68', 'V69', 'V70',
+        'V71', 'V72', 'V73', 'V74', 'V75', 'V76', 'V77', 'V78', 'V79', 'V80',
+        'V81', 'V82', 'V83', 'V84', 'V85', 'V86', 'V87', 'V88', 'V89', 'V90',
+        'V91', 'V92', 'V93', 'V94', 'V95', 'V96', 'V97', 'V98', 'V99', 'V100',
+        'V101', 'V102', 'V103', 'V104', 'V105', 'V106', 'V107', 'V108', 'V109', 'V110',
+        'V111', 'V112', 'V113', 'V114', 'V115', 'V116', 'V117', 'V118', 'V119', 'V120',
+        'V121', 'V122', 'V123', 'V124', 'V125', 'V126', 'V127', 'V128', 'V129', 'V130',
+        'V131', 'V132', 'V133', 'V134', 'V135', 'V136', 'V137', 'V138', 'V139', 'V140',
+        # Note: Do not include 'Time' as it's mentioned as "unseen at fit time"
+    ]
+    
+    # Create a new dict with only the required features
+    result = {}
+    
+    # Map Amount to TransactionAmt if present
+    if 'Amount' in data_dict and 'TransactionAmt' not in data_dict:
+        result['TransactionAmt'] = data_dict['Amount']
+    
+    # Add all required features with default value 0
+    for feature in required_features:
+        # If feature exists in input, use that value, otherwise use 0
+        if feature in data_dict:
+            result[feature] = data_dict[feature]
+        else:
+            result[feature] = 0.0
+    
+    return result
+
 # Recreate the AdvancedMLPipeline class
 class AdvancedMLPipeline:
     def __init__(self, model_type='rf', n_components=10, remove_outliers=True):
@@ -87,26 +151,86 @@ class AdvancedMLPipeline:
         self.remove_outliers = remove_outliers
         self.cat_columns = []
         self.feature_columns = []
-
-    def _add_features(self, df):
-        # Create time features from TransactionDT
-        if 'TransactionDT' in df.columns:
-            df['hour'] = pd.to_datetime(df['TransactionDT'], unit='s', errors='coerce').dt.hour.astype('Int8')
-            df['day'] = pd.to_datetime(df['TransactionDT'], unit='s', errors='coerce').dt.dayofweek.astype('Int8')
-            df.drop(columns=['TransactionDT'], inplace=True)
-
-        # Group-level aggregation features
-        c_cols = [col for col in df.columns if col.startswith('C')]
-        d_cols = [col for col in df.columns if col.startswith('D')]
-        v_cols = [col for col in df.columns if col.startswith('V')]
-
-        if c_cols:
-            df['C_sum'] = df[c_cols].sum(axis=1)
-        if d_cols:
-            df['D_missing'] = df[d_cols].isnull().sum(axis=1)
-        if v_cols:
-            df['V_mean'] = df[v_cols].mean(axis=1)
-        return df
+    
+    def transform(self, X):
+        """Transform the input data for prediction."""
+        try:
+            # Create a copy of the input DataFrame
+            X_copy = X.copy()
+            
+            # Apply feature engineering
+            X_copy = self.__add_features(X_copy)
+            
+            # Separate numerical and categorical features if any
+            numerical_features = [col for col in X_copy.columns if col not in self.cat_columns]
+            
+            # Apply transformations (simplified for compatibility)
+            if numerical_features:
+                # Apply imputation and scaling
+                X_numerical = X_copy[numerical_features]
+                X_numerical = pd.DataFrame(
+                    self.imputer_num.transform(X_numerical),
+                    columns=numerical_features,
+                    index=X_copy.index
+                )
+                
+                # Return transformed data
+                return X_numerical
+            
+            return X_copy
+        except Exception as e:
+            # Log the error
+            print(f"Transform error: {e}")
+            # Return the original data as fallback
+            return X
+            
+    def transform_for_predict(self, X):
+        """Transform data to match model's expected features."""
+        global MODEL_FEATURES
+        
+        try:
+            # Apply feature engineering first if possible
+            X_copy = self.__add_features(X.copy())
+            
+            # Create a new DataFrame with only the expected features
+            new_df = pd.DataFrame(0.0, index=X_copy.index, columns=MODEL_FEATURES)
+            
+            # Copy basic features that might be in both
+            for col in X_copy.columns:
+                if col in MODEL_FEATURES:
+                    new_df[col] = X_copy[col]
+            
+            # Handle special features like C_sum which is calculated
+            if 'C_sum' in MODEL_FEATURES and 'C_sum' not in X_copy.columns:
+                # Calculate C_sum if possible
+                c_cols = [col for col in X_copy.columns if col.startswith('C')]
+                if c_cols:
+                    new_df['C_sum'] = X_copy[c_cols].sum(axis=1)
+            
+            # Handle hour and day if available
+            if 'hour' in MODEL_FEATURES and 'hour' in X_copy.columns:
+                new_df['hour'] = X_copy['hour']
+            
+            if 'day' in MODEL_FEATURES and 'day' in X_copy.columns:
+                new_df['day'] = X_copy['day']
+            
+            # Handle D_missing feature
+            if 'D_missing' in MODEL_FEATURES:
+                # Calculate D_missing as count of missing D values
+                d_cols = [col for col in X_copy.columns if col.startswith('D')]
+                if d_cols:
+                    new_df['D_missing'] = X_copy[d_cols].isna().sum(axis=1)
+                else:
+                    new_df['D_missing'] = 0
+            
+            # Note: We'll let one-hot encoded features stay as 0s since we can't easily determine them
+            
+            return new_df
+            
+        except Exception as e:
+            logger.error(f"transform_for_predict error: {e}")
+            # Create an emergency fallback with all zeros
+            return pd.DataFrame(0.0, index=X.index, columns=MODEL_FEATURES)
 
     def _remove_outliers(self, df, col='TransactionAmt'):
         if col in df.columns:
@@ -360,6 +484,9 @@ async def predict(request: TransactionRequest):
     try:
         # Log the received data
         transaction_data = request.data
+        
+        # Ensure all required features are present
+        transaction_data = ensure_features(transaction_data)
         logger.info(f"Request {request_id}: Received prediction request with {len(transaction_data)} features")
         
         # Convert dict to DataFrame

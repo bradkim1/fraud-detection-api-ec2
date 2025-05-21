@@ -358,6 +358,29 @@
                                 <canvas id="distributionChart" height="100"></canvas>
                             </div>
                         </div>
+<!-- Deployment History Section -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6>Deployment History</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Version</th>
+                                                <th>Commit</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="deployment-history">
+                                            <tr>
+                                                <td colspan="4" class="text-center text-muted">Loading deployment history...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -588,6 +611,47 @@
                     lastCheckElement.textContent = lastAPICheck.toLocaleTimeString();
                 });
         }
+// Load deployment history
+        function loadDeploymentHistory() {
+            fetch('/api/deployment-history')
+                .then(response => response.json())
+                .then(deployments => {
+                    const tbody = document.getElementById('deployment-history');
+                    tbody.innerHTML = '';
+                    
+                    deployments.forEach(dep => {
+                        const row = document.createElement('tr');
+                        
+                        const dateCell = document.createElement('td');
+                        dateCell.textContent = dep.date;
+                        
+                        const versionCell = document.createElement('td');
+                        versionCell.textContent = dep.version;
+                        
+                        const commitCell = document.createElement('td');
+                        commitCell.textContent = dep.commit;
+                        
+                        const statusCell = document.createElement('td');
+                        if (dep.status === 'Success') {
+                            statusCell.innerHTML = '<span class="badge bg-success">Success</span>';
+                        } else {
+                            statusCell.innerHTML = '<span class="badge bg-danger">Failed</span>';
+                        }
+                        
+                        row.appendChild(dateCell);
+                        row.appendChild(versionCell);
+                        row.appendChild(commitCell);
+                        row.appendChild(statusCell);
+                        
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching deployment history:', error);
+                    document.getElementById('deployment-history').innerHTML = 
+                        '<tr><td colspan="4" class="text-center">Unable to load deployment history</td></tr>';
+                });
+        }
         
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
@@ -605,9 +669,13 @@
             updateDateTime();
             setInterval(updateDateTime, 1000);
             
-            // Check API status initially and periodically
+	    // Check API status initially and periodically
             checkAPIStatus();
             setInterval(checkAPIStatus, 30000); // Check every 30 seconds
+            
+            // Load deployment history
+            loadDeploymentHistory();
+            setInterval(loadDeploymentHistory, 60000); // Refresh every minute
             
             // Form submission handler
             document.getElementById('fraudForm').addEventListener('submit', function(e) {
