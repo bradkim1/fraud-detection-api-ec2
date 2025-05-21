@@ -28,14 +28,39 @@ A machine learning API for detecting fraudulent transactions. This system uses a
    cd fraud-detection-api-ec2
 
 
-## Large Files Not Included in Repository
+**Training Dataset train_transaction.csv
+   - This needs to be unzipped when needed for model training
 
-This repository does not include the following large files due to GitHub size limitations:
+## Large File Not Included in Repository
 
-1. **Training Dataset (`train_transaction.csv`)**:
-   - This large dataset needs to be downloaded separately from google drive
-   - Place it in the `notebooks/` directory before running the training notebook
+This repository does not include the following large file due to GitHub size limitations:
 
-2. **Miniconda Installer**:
+
+1. **Miniconda Installer**:
    - Not required for running the application
    - If needed, download from https://docs.conda.io/en/latest/miniconda.html
+
+Fraud Detection API project follows this structure:
+
+
+    model-ec2/
+    ├── model/                    # Trained model and pipeline files
+    │   ├── model.pkl             # Serialized machine learning model
+    │   ├── pipeline.pkl          # Preprocessing pipeline
+    │   └── pipeline_module.py    # Helper module for using the pipeline
+    ├── fraud-ui/                 # Web interface files
+    │   ├── index.html            # Main prediction interface
+    │   ├── dashboard.html        # Monitoring dashboard
+    │   └── logs.html             # Log viewer
+    ├── docs/                     # Documentation
+    │   ├── source/               # Documentation source files
+    │   └── build/                # Generated documentation
+    ├── notebooks/                # Jupyter notebooks
+    │   └── fraud_model_training.ipynb # Model training notebook
+    ├── logs/                     # API logs
+    ├── nginx/                    # Nginx configuration
+    ├── enhanced_fraud_api.py     # API implementation
+    ├── requirements.txt          # Python dependencies
+    ├── Dockerfile                # Docker configuration
+    ├── docker-compose.yml        # Docker Compose configuration
+    └── README.md                 # Project documentation
