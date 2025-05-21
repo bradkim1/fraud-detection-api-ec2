@@ -2,7 +2,7 @@
 
 A machine learning API for detecting fraudulent transactions. This system uses a Random Forest classifier trained on transactional data to identify potentially fraudulent activities.
 
-![Fraud Detection UI](docs/images/fraud-detection-ui.png)
+![Fraud Detection UI](docs/source/images/prediction_interface.png)
 
 ## Features
 
