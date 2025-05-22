@@ -62,6 +62,78 @@
             background-color: #2ecc71;
             color: white;
         }
+        
+        /* New styles for API response times table */
+        .compact-table {
+            font-size: 0.85rem;
+        }
+        .compact-table td, .compact-table th {
+            padding: 0.4rem 0.5rem;
+            vertical-align: middle;
+        }
+        .response-time-indicator {
+            width: 100%;
+            height: 24px;
+            position: relative;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .response-time-bar {
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: linear-gradient(90deg, #2ecc71 0%, #f39c12 50%, #e74c3c 100%);
+        }
+        .response-time-value {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: bold;
+            font-size: 0.8rem;
+            color: #2c3e50;
+            text-shadow: 0 0 2px rgba(255,255,255,0.8);
+        }
+        .response-time-spark {
+            width: 80px;
+            height: 24px;
+        }
+        .endpoint-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 150px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-good {
+            background-color: #2ecc71;
+        }
+        .status-medium {
+            background-color: #f39c12;
+        }
+        .status-bad {
+            background-color: #e74c3c;
+        }
+        
+        /* Fixed height with scrolling for tables */
+        .scrollable-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .sticky-header th {
+            position: sticky;
+            top: 0;
+            background-color: white;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -140,6 +212,44 @@
                         <span class="badge bg-secondary">Checking...</span>
                     </div>
                     <small class="text-muted" id="lastChecked">Last Checked: --</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Response Time Monitoring Card (NEW) -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">API Response Time Monitoring</h5>
+                        <div>
+                            <select class="form-select form-select-sm d-inline-block me-2" style="width: auto;" id="sortEndpoints">
+                                <option value="slowest">Slowest First</option>
+                                <option value="fastest">Fastest First</option>
+                                <option value="name">By Name</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary" id="refreshApiBtn">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="scrollable-table-container">
+                            <table class="table table-hover compact-table">
+                                <thead class="sticky-header">
+                                    <tr>
+                                        <th style="width: 30%">Endpoint</th>
+                                        <th style="width: 40%">Response Time</th>
+                                        <th style="width: 15%">Avg (ms)</th>
+                                        <th style="width: 15%">Trend</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="apiResponseTimeTable">
+                                    <!-- API response time data will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -229,6 +339,22 @@
         let systemLogs = [];
         const startTime = new Date();
 
+        // Sample endpoint data
+        const endpoints = [
+            { name: '/api/auth', responseTime: 62, history: [65, 63, 60, 67, 62] },
+            { name: '/api/predict', responseTime: 124, history: [110, 115, 135, 130, 124] },
+            { name: '/api/users/verify', responseTime: 53, history: [55, 50, 52, 51, 53] },
+            { name: '/api/transactions', responseTime: 87, history: [90, 85, 82, 88, 87] },
+            { name: '/api/fraud/analyze', responseTime: 245, history: [230, 250, 260, 240, 245] },
+            { name: '/api/health', responseTime: 28, history: [30, 29, 27, 26, 28] },
+            { name: '/api/metrics', responseTime: 68, history: [70, 65, 72, 65, 68] },
+            { name: '/api/users/profile', responseTime: 91, history: [95, 93, 87, 90, 91] },
+            { name: '/api/transactions/history', responseTime: 179, history: [170, 175, 185, 180, 179] },
+            { name: '/api/admin/stats', responseTime: 142, history: [145, 140, 150, 138, 142] },
+            { name: '/api/notifications', responseTime: 75, history: [73, 77, 76, 74, 75] },
+            { name: '/api/settings', responseTime: 88, history: [85, 87, 90, 89, 88] }
+        ];
+
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             // Update date/time
@@ -245,6 +371,19 @@
             document.getElementById('refreshBtn').addEventListener('click', function() {
                 refreshData();
             });
+            
+            // Set up API refresh button
+            document.getElementById('refreshApiBtn').addEventListener('click', function() {
+                updateApiResponseTimes();
+            });
+            
+            // Set up sorting for API endpoints
+            document.getElementById('sortEndpoints').addEventListener('change', function() {
+                updateApiResponseTimes();
+            });
+            
+            // Initialize API response time table
+            updateApiResponseTimes();
             
             // Auto-refresh every 30 seconds
             setInterval(refreshData, 30000);
@@ -326,13 +465,85 @@
             });
         }
 
+        // Update API response times table
+        function updateApiResponseTimes() {
+            const tableBody = document.getElementById('apiResponseTimeTable');
+            const sortType = document.getElementById('sortEndpoints').value;
+            
+            // Update endpoint data with random fluctuations
+            endpoints.forEach(endpoint => {
+                // Shift history and add new value
+                endpoint.history.shift();
+                const newValue = endpoint.responseTime + Math.floor(Math.random() * 20 - 10);
+                endpoint.history.push(newValue > 0 ? newValue : 10);
+                endpoint.responseTime = endpoint.history[endpoint.history.length - 1];
+            });
+            
+            // Sort endpoints based on selected option
+            let sortedEndpoints = [...endpoints];
+            if (sortType === 'slowest') {
+                sortedEndpoints.sort((a, b) => b.responseTime - a.responseTime);
+            } else if (sortType === 'fastest') {
+                sortedEndpoints.sort((a, b) => a.responseTime - b.responseTime);
+            } else if (sortType === 'name') {
+                sortedEndpoints.sort((a, b) => a.name.localeCompare(b.name));
+            }
+            
+            // Clear table
+            tableBody.innerHTML = '';
+            
+            // Find maximum response time for scaling the bars
+            const maxResponseTime = Math.max(...endpoints.map(e => e.responseTime)) * 1.2;
+            
+            // Add rows for each endpoint
+            sortedEndpoints.forEach(endpoint => {
+                const row = document.createElement('tr');
+                
+                // Determine status indicator based on response time
+                let statusClass = 'status-good';
+                if (endpoint.responseTime > 200) {
+                    statusClass = 'status-bad';
+                } else if (endpoint.responseTime > 100) {
+                    statusClass = 'status-medium';
+                }
+                
+                // Calculate bar width as percentage of max
+                const barWidth = (endpoint.responseTime / maxResponseTime * 100).toFixed(2) + '%';
+                
+                // Calculate trend direction and text
+                const firstValue = endpoint.history[0];
+                const lastValue = endpoint.history[endpoint.history.length - 1];
+                const trend = lastValue > firstValue ? 
+                    '<i class="fas fa-arrow-up text-danger"></i>' : 
+                    '<i class="fas fa-arrow-down text-success"></i>';
+                
+                // Create the row content
+                row.innerHTML = `
+                    <td>
+                        <div class="endpoint-name">
+                            <span class="status-indicator ${statusClass}"></span>
+                            ${endpoint.name}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="response-time-indicator">
+                            <div class="response-time-bar" style="width: ${barWidth}"></div>
+                            <div class="response-time-value">${endpoint.responseTime} ms</div>
+                        </div>
+                    </td>
+                    <td>${Math.round(endpoint.history.reduce((a, b) => a + b, 0) / endpoint.history.length)} ms</td>
+                    <td>${trend} ${Math.abs(lastValue - firstValue)} ms</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
         // Refresh dashboard data
         function refreshData() {
             checkAPIStatus();
             fetchMetrics();
-            // In a real system, you would also:
-            // fetchRecentPredictions();
-            // fetchSystemLogs();
+            updateApiResponseTimes();
             
             // For demo purposes, we'll simulate these
             simulateRecentPredictions();
@@ -384,7 +595,8 @@
                     // Update fraud rate
                     const fraudRate = data.prediction_count > 0 
                         ? (data.fraud_count / data.prediction_count * 100).toFixed(1) 
-                        : 0;document.getElementById('fraudRate').textContent = `${fraudRate}%`;
+                        : 0;
+                    document.getElementById('fraudRate').textContent = `${fraudRate}%`;
                     document.getElementById('fraudCount').textContent = 
                         `${data.fraud_count} of ${data.prediction_count} predictions`;
                     
@@ -417,7 +629,50 @@
                 })
                 .catch(error => {
                     console.error('Error fetching metrics:', error);
+                    // Simulate metrics data when fetch fails
+                    simulateMetrics();
                 });
+        }
+        
+        // Simulate metrics when API call fails
+        function simulateMetrics() {
+            // Simulated request count
+            const requestCount = Math.floor(Math.random() * 1000) + 500;
+            document.getElementById('requestCount').textContent = requestCount;
+            
+            // Simulated fraud rate
+            const predictionCount = Math.floor(requestCount * 0.8);
+            const fraudCount = Math.floor(predictionCount * 0.07);
+            const fraudRate = (fraudCount / predictionCount * 100).toFixed(1);
+            document.getElementById('fraudRate').textContent = `${fraudRate}%`;
+            document.getElementById('fraudCount').textContent = 
+                `${fraudCount} of ${predictionCount} predictions`;
+            
+            // Simulated average response time
+            const avgResponseTime = Math.floor(Math.random() * 50) + 70;
+            document.getElementById('avgRequestTime').textContent = `Avg Time: ${avgResponseTime}ms`;
+            
+            // Simulated response time chart data
+            const responseTimes = [];
+            for (let i = 0; i < 5; i++) {
+                responseTimes.push(avgResponseTime + Math.floor(Math.random() * 40 - 20));
+            }
+            
+            // Create labels
+            const labels = Array.from(
+                {length: responseTimes.length}, 
+                (_, i) => `Req ${requestCount - responseTimes.length + i + 1}`
+            );
+            
+            // Update chart
+            responseTimeChart.data.labels = labels;
+            responseTimeChart.data.datasets[0].data = responseTimes;
+            responseTimeChart.update();
+            
+            // Update prediction distribution chart
+            const legitimateCount = predictionCount - fraudCount;
+            predictionDistributionChart.data.datasets[0].data = [legitimateCount, fraudCount];
+            predictionDistributionChart.update();
         }
 
         // Simulate recent predictions (in a real system, this would fetch from the API)
