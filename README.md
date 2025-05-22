@@ -148,15 +148,6 @@ Steps:
 3. Make approval/decline decision based on risk score
 ```
 
-2. Use Case: Analyzing past transactions for patterns
-
-```
-Steps:
-1. Upload historical transaction file
-2. Review batch results
-3. Identify trends and patterns
-4. Ad
-```
 
 Features and Functionality
 
