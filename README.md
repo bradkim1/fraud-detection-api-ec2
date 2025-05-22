@@ -40,10 +40,8 @@ This repository does not include the following large file due to GitHub size lim
    - Not required for running the application
    - If needed, download from https://docs.conda.io/en/latest/miniconda.html
   
-     
-Fraud Detection API project follows this structure:
 
-All other files which were committed but not on the structure were used for test purpose
+Fraud Detection API project follows this structure:
 
     model-ec2/
     ├── model/                    # Trained model and pipeline files
