@@ -29,6 +29,16 @@
             border-bottom: 1px solid rgba(0,0,0,0.05);
             font-weight: 600;
         }
+/* Fixed height chart containers */
+        .chart-container {
+            height: 150px !important;
+            position: relative;
+            overflow: hidden !important;
+        }
+        canvas {
+            max-height: 150px !important;
+            height: 150px !important;
+        }
         .result-card {
             border-radius: 10px;
             padding: 20px;
@@ -351,11 +361,15 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <h6>API Response Times (ms)</h6>
-                                <canvas id="responseTimeChart" height="100"></canvas>
+				<div class="chart-container">
+                                    <canvas id="responseTimeChart" height="100"></canvas>
+				</div>
                             </div>
                             <div class="col-md-6">
                                 <h6>Prediction Distribution</h6>
-                                <canvas id="distributionChart" height="100"></canvas>
+				<div class="chart-container">
+                                    <canvas id="distributionChart" height="100"></canvas>
+				</div>
                             </div>
                         </div>
 <!-- Deployment History Section -->
@@ -412,6 +426,16 @@
         let responseTimeChart;
         let distributionChart;
         
+// Force correct chart heights
+        function fixChartHeights() {
+            const canvases = document.querySelectorAll('canvas');
+            canvases.forEach(canvas => {
+                canvas.style.height = '150px';
+                canvas.style.maxHeight = '150px';
+                canvas.height = 150;
+            });
+        }
+
         // Update current date and time
         function updateDateTime() {
             const now = new Date();
@@ -470,15 +494,25 @@
                         tension: 0.2
                     }]
                 },
-                options: {
+		options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false // Or position: 'right' with smaller labels
+                        }
+                    },
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                maxTicksLimit: 3 // Limit number of ticks
+                            }
                         }
                     }
-                }
+                }		
+
+
             });
             
             // Distribution chart
@@ -492,10 +526,20 @@
                         backgroundColor: ['#2ecc71', '#e74c3c']
                     }]
                 },
-                options: {
+		options: {
                     responsive: true,
-                    maintainAspectRatio: false
-                }
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 10,
+                                padding: 5
+                            }
+                        }
+                    }
+                }		
+
             });
         }
         
@@ -531,13 +575,15 @@
             }
             
             responseTimeChart.update();
-        }
+	    setTimeout(fixChartHeights, 100);
+	}
         
         // Update distribution chart
         function updateDistributionChart() {
             const legitCount = totalPredictions - fraudCount;
             distributionChart.data.datasets[0].data = [legitCount, fraudCount];
             distributionChart.update();
+	    setTimeout(fixChartHeights, 100);	
         }
         
         // Add transaction to history
@@ -659,7 +705,7 @@
             
             // Initialize charts
             initCharts();
-            
+            fixChartHeights();
             // Set current date/time in transaction form
             const now = new Date();
             const dateTimeStr = now.toISOString().slice(0, 16);
