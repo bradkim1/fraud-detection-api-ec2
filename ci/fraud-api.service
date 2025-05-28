@@ -1,0 +1,14 @@
+[Unit]
+Description=Enhanced Fraud Detection API
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/model-ec2
+ExecStart=python3 /home/ubuntu/model-ec2/fixed_api.py
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
